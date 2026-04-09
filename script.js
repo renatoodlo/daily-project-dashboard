@@ -261,49 +261,22 @@ const agendaItems = [
 ];
 
 const powerBiConfig = {
-  // Cole os links de embed por dia. Na segunda, temos duas abas: Segurança e Qualidade.
-  dayPanels: {
-    1: {
-      title: "Radar de Qualidade e Segurança",
-      subtitle: "Indicadores principais da segunda-feira.",
-      embeds: [
-        { label: "Indicador de Segurança", url: "https://app.powerbi.com/reportEmbed?reportId=a613922a-6aa9-4d0b-a08d-89ad34a4dd97&appId=52078303-0901-4553-a5e5-8a10a7182946&autoAuth=true&ctid=9f904e8a-2bf7-4b81-ac8a-a560eae844b3" },
-        { label: "Indicador de Qualidade", url: "https://app.powerbi.com/reportEmbed?reportId=c85896fc-f4df-4d07-bc4b-d748e7da1433&appId=c2d998d3-38ee-44a2-b33a-dbc646d1d9ad&autoAuth=true&ctid=9f904e8a-2bf7-4b81-ac8a-a560eae844b3" }
-      ]
-    },
-    2: {
-      title: "Gestão de Ações",
-      subtitle: "Painel principal de acompanhamento.",
-      embeds: [
-        { label: "Gestão de Ações", url: "https://app.powerbi.com/reportEmbed?reportId=9bfea108-ecd9-4ac2-b9b7-3adfa9999a92&appId=77b9df0c-9b23-471b-bfa0-5fa118edb48a&autoAuth=true&ctid=9f904e8a-2bf7-4b81-ac8a-a560eae844b3" }
-      ]
-    },
-    3: {
-      title: "Gestão de Ações",
-      subtitle: "Painel principal de acompanhamento.",
-      embeds: [
-        { label: "Gestão de Ações", url: "https://app.powerbi.com/reportEmbed?reportId=9bfea108-ecd9-4ac2-b9b7-3adfa9999a92&appId=77b9df0c-9b23-471b-bfa0-5fa118edb48a&autoAuth=true&ctid=9f904e8a-2bf7-4b81-ac8a-a560eae844b3" }
-      ]
-    },
-    4: {
-      title: "Gestão de Ações",
-      subtitle: "Painel principal de acompanhamento.",
-      embeds: [
-        { label: "Gestão de Ações", url: "https://app.powerbi.com/reportEmbed?reportId=9bfea108-ecd9-4ac2-b9b7-3adfa9999a92&appId=77b9df0c-9b23-471b-bfa0-5fa118edb48a&autoAuth=true&ctid=9f904e8a-2bf7-4b81-ac8a-a560eae844b3" }
-      ]
-    },
-    5: {
-      title: "Gestão de Ações",
-      subtitle: "Painel principal de acompanhamento.",
-      embeds: [
-        { label: "Gestão de Ações", url: "https://app.powerbi.com/reportEmbed?reportId=9bfea108-ecd9-4ac2-b9b7-3adfa9999a92&appId=77b9df0c-9b23-471b-bfa0-5fa118edb48a&autoAuth=true&ctid=9f904e8a-2bf7-4b81-ac8a-a560eae844b3" }
-      ]
-    }
-  }
+  title: "Indicadores Fixos da Reunião",
+  subtitle: "Painéis permanentes de acompanhamento da manufatura.",
+  embeds: [
+    { label: "Incidentes e Acidentes", url: "https://app.powerbi.com/reportEmbed?reportId=a613922a-6aa9-4d0b-a08d-89ad34a4dd97&appId=52078303-0901-4553-a5e5-8a10a7182946&autoAuth=true&ctid=9f904e8a-2bf7-4b81-ac8a-a560eae844b3" },
+    { label: "Controle de SAC", url: "https://app.powerbi.com/reportEmbed?reportId=c85896fc-f4df-4d07-bc4b-d748e7da1433&appId=c2d998d3-38ee-44a2-b33a-dbc646d1d9ad&autoAuth=true&ctid=9f904e8a-2bf7-4b81-ac8a-a560eae844b3" },
+    { label: "Dashboard OEE", url: "https://app.powerbi.com/reportEmbed?reportId=d966fc20-91e7-47c4-aa7e-97a19bcbc807&appId=2dfba8c2-6aac-4987-ba39-db97e2d8c33d&autoAuth=true&ctid=9f904e8a-2bf7-4b81-ac8a-a560eae844b3" },
+    { label: "Dashboard Retrabalho", url: "https://app.powerbi.com/reportEmbed?reportId=06e7c078-2ea4-4427-bd6b-82ce4e7982d5&appId=2dfba8c2-6aac-4987-ba39-db97e2d8c33d&autoAuth=true&ctid=9f904e8a-2bf7-4b81-ac8a-a560eae844b3" },
+    { label: "Performance por Responsável", url: "" }
+  ]
 };
 
 const GD_STORAGE_KEY = "gd_action_items_v1";
 const gdItems = loadGdItems();
+const AGENDA_CHECK_STORAGE_KEY = "gd_agenda_checks_v1";
+const checkedAgendaItems = loadCheckedAgendaItems();
+resetAgendaChecks();
 
 let selectedDay = getInitialDay();
 let showingAll = false;
@@ -340,6 +313,7 @@ const gdEmpty = document.querySelector("#gdEmpty");
 
 document.querySelectorAll(".day-button").forEach((button) => {
   button.addEventListener("click", () => {
+    resetAgendaChecks();
     selectedDay = Number(button.dataset.day);
     selectedBiIndex = 0;
     showingAll = false;
@@ -413,9 +387,10 @@ function render() {
   const today = new Date();
   const todayDay = getInitialDay();
   const isFirstWeek = isFirstWeekOfMonth(today);
-  const visibleItems = showingAll
+  let visibleItems = showingAll
     ? agendaItems.filter((item) => item.days.length > 0)
     : agendaItems.filter((item) => shouldShowItem(item, selectedDay));
+  visibleItems = sortAgendaItemsForDisplay(visibleItems);
 
   todayText.textContent = `Abra a reunião e vá direto nos temas de ${DAYS[todayDay]}. Os itens mensais aparecem automaticamente na primeira semana do mês.`;
   currentDayName.textContent = DAYS[todayDay];
@@ -436,23 +411,29 @@ function render() {
 
   agendaList.querySelectorAll("[data-copy]").forEach(bindCopyButton);
   agendaList.querySelectorAll("[data-network-path]").forEach(bindNetworkPathButton);
+  agendaList.querySelectorAll("[data-mark-done]").forEach(bindMarkDoneLink);
   renderPowerBiControls();
   renderGdTable();
 }
 
 function createCard(item) {
-  const links = (Array.isArray(item.links) ? item.links : []).map(createLinkButton).join("");
+  const itemId = getAgendaItemId(item);
+  const isDone = checkedAgendaItems.has(itemId);
+  const links = (Array.isArray(item.links) ? item.links : []).map((link) => createLinkButton({ ...link, itemId })).join("");
   const daysText = item.days.length ? item.days.map((day) => DAYS[day].replace("-feira", "")).join(", ") : "Dia a confirmar";
   const note = item.note ? `<span class="item-note">${escapeHtml(item.note)}</span>` : "";
+  const areaClass = `area-${normalizeToken(item.area)}`;
 
   return `
-    <article class="agenda-card">
-      <div><span class="area-pill">${escapeHtml(item.area)}</span></div>
+    <article class="agenda-card ${isDone ? "is-done" : ""}">
+      <div><span class="area-pill ${areaClass}">${escapeHtml(item.area)}</span></div>
       <div>
         <p class="item-title">${escapeHtml(item.title)}</p>
         <p class="item-meta">${escapeHtml(item.frequency)} | ${escapeHtml(daysText)}${note}</p>
       </div>
-      <div class="actions">${links || `<span class="item-meta">Sem link</span>`}</div>
+      <div class="actions">
+        ${links || `<span class="item-meta">Sem link</span>`}
+      </div>
     </article>
   `;
 }
@@ -461,12 +442,12 @@ function createLinkButton(link) {
   const url = normalizeUrl(link.url);
   const isNetworkPath = link.url.startsWith("\\\\");
   const openButton = isNetworkPath
-    ? `<button class="action-button" type="button" data-network-path="${escapeAttribute(link.url)}">${escapeHtml(link.label)}</button>`
-    : `<a class="action-button" href="${escapeAttribute(url)}" target="_blank" rel="noreferrer">${escapeHtml(link.label)}</a>`;
+    ? `<button class="action-button" type="button" data-network-path="${escapeAttribute(link.url)}" data-mark-done="1" data-item-id="${escapeAttribute(link.itemId || "")}">${escapeHtml(link.label)}</button>`
+    : `<a class="action-button" href="${escapeAttribute(url)}" target="_blank" rel="noreferrer" data-mark-done="1" data-item-id="${escapeAttribute(link.itemId || "")}">${escapeHtml(link.label)}</a>`;
 
   return `
     ${openButton}
-    <button class="action-button copy" type="button" data-copy="${escapeAttribute(link.url)}">Copiar</button>
+    <button class="action-button copy" type="button" data-copy="${escapeAttribute(link.url)}" data-item-id="${escapeAttribute(link.itemId || "")}">Copiar</button>
   `;
 }
 
@@ -475,9 +456,28 @@ function normalizeUrl(url) {
     return `file://///${url.slice(2).replaceAll("\\", "/")}`;
   }
   if (url.startsWith("http://") || url.startsWith("https://")) {
-    return url;
+    return repairWebUrl(url);
   }
   return `https://${url}`;
+}
+
+function repairWebUrl(url) {
+  let fixed = url;
+  const firstParamCandidates = ["reportId=", "ctid=", "orgId=", "sourcedoc=", "d=", "e=", "experience=", "appId="];
+  if (!fixed.includes("?")) {
+    for (const key of firstParamCandidates) {
+      const idx = fixed.indexOf(key);
+      if (idx > 0) {
+        fixed = `${fixed.slice(0, idx)}?${fixed.slice(idx)}`;
+        break;
+      }
+    }
+  }
+  fixed = fixed.replace("ReportSectionctid=", "ReportSection?ctid=");
+  fixed = fixed.replace("reportEmbedreportId=", "reportEmbed?reportId=");
+  fixed = fixed.replace(".xlsxd=", ".xlsx?d=");
+  fixed = fixed.replace(".aspxsourcedoc=", ".aspx?sourcedoc=");
+  return fixed;
 }
 
 function bindCopyButton(button) {
@@ -496,6 +496,7 @@ function bindCopyButton(button) {
 function bindNetworkPathButton(button) {
   button.addEventListener("click", async () => {
     const value = button.dataset.networkPath;
+    setAgendaItemDone(button.dataset.itemId, true);
     try {
       await navigator.clipboard.writeText(value);
       showToast("Caminho copiado. Abra no Explorer com Win+R, Ctrl+V e Enter.");
@@ -512,6 +513,13 @@ function showToast(message) {
   showToast.timer = window.setTimeout(() => toast.classList.remove("show"), 2400);
 }
 
+function bindMarkDoneLink(element) {
+  element.addEventListener("click", () => {
+    setAgendaItemDone(element.dataset.itemId, true);
+    render();
+  });
+}
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -525,16 +533,70 @@ function escapeAttribute(value) {
   return escapeHtml(value);
 }
 
+function normalizeToken(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function getAgendaItemId(item) {
+  return `${item.area}|${item.title}|${(item.days || []).join(",")}`;
+}
+
+function loadCheckedAgendaItems() {
+  try {
+    const saved = localStorage.getItem(AGENDA_CHECK_STORAGE_KEY);
+    const parsed = saved ? JSON.parse(saved) : [];
+    return new Set(Array.isArray(parsed) ? parsed : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function persistCheckedAgendaItems() {
+  localStorage.setItem(AGENDA_CHECK_STORAGE_KEY, JSON.stringify([...checkedAgendaItems]));
+}
+
+function resetAgendaChecks() {
+  checkedAgendaItems.clear();
+  persistCheckedAgendaItems();
+}
+
+function setAgendaItemDone(itemId, done) {
+  if (!itemId) return;
+  if (done) {
+    checkedAgendaItems.add(itemId);
+  } else {
+    checkedAgendaItems.delete(itemId);
+  }
+  persistCheckedAgendaItems();
+}
+
+function sortAgendaItemsForDisplay(items) {
+  if (selectedDay !== 1 || showingAll) {
+    return items;
+  }
+  const priority = { seguranca: 0, qualidade: 1 };
+  return [...items].sort((a, b) => {
+    const pa = priority[normalizeToken(a.area)] ?? 9;
+    const pb = priority[normalizeToken(b.area)] ?? 9;
+    if (pa !== pb) return pa - pb;
+    return a.title.localeCompare(b.title, "pt-BR");
+  });
+}
+
 function renderPowerBiControls() {
-  const dayPanel = getDayPanel(selectedDay);
-  const embeds = dayPanel.embeds || [];
+  const embeds = powerBiConfig.embeds || [];
   const hasTabs = embeds.length > 1;
 
-  biPanelTitle.textContent = dayPanel.title;
-  biPanelSubtitle.textContent = dayPanel.subtitle || "";
+  biPanelTitle.textContent = powerBiConfig.title;
+  biPanelSubtitle.textContent = powerBiConfig.subtitle || "";
   biHelpText.textContent = hasTabs
-    ? "Segunda-feira com foco nos indicadores de Qualidade e Segurança."
-    : "Painel de indicadores do dia selecionado.";
+    ? "Dashboards fixos da reunião. Escolha o painel na aba."
+    : "Painel fixo da reunião.";
 
   if (selectedBiIndex >= embeds.length) {
     selectedBiIndex = 0;
@@ -554,15 +616,15 @@ function renderPowerBiControls() {
       .join("")
     : "";
 
-  applyPowerBi(dayPanel);
+  applyPowerBi();
 }
 
-function applyPowerBi(dayPanel = getDayPanel(selectedDay)) {
-  const selectedEmbed = getSelectedEmbed(dayPanel);
+function applyPowerBi() {
+  const selectedEmbed = getSelectedEmbed();
   const url = buildPowerBiUrl(selectedEmbed);
   const selectedLabel = selectedEmbed?.label || "Indicador";
 
-  biCurrentDay.textContent = `${DAYS[selectedDay]} | ${selectedLabel}`;
+  biCurrentDay.textContent = `Dashboard | ${selectedLabel}`;
   if (!url) {
     biToolbar.hidden = true;
     biFrameWrap.hidden = true;
@@ -590,16 +652,8 @@ function buildPowerBiUrl(embedItem) {
   return rawUrl;
 }
 
-function getDayPanel(day) {
-  return powerBiConfig.dayPanels[day] || {
-    title: "Painel do Dia",
-    subtitle: "",
-    embeds: []
-  };
-}
-
-function getSelectedEmbed(dayPanel) {
-  const embeds = dayPanel.embeds || [];
+function getSelectedEmbed() {
+  const embeds = powerBiConfig.embeds || [];
   if (!embeds.length) {
     return null;
   }

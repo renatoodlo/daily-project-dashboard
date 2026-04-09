@@ -79,7 +79,7 @@ a {
   border-radius: 8px;
   color: #ffffff;
   background: linear-gradient(110deg, rgba(5, 23, 41, 0.98), rgba(8, 34, 56, 0.96));
-  border: 1px solid rgba(47, 234, 217, 0.25);
+  border: 1px solid rgba(255,255,255.1);
   box-shadow: var(--shadow);
 }
 
@@ -432,6 +432,11 @@ h2 {
   background: var(--surface-soft);
 }
 
+.agenda-card.is-done {
+  border-color: rgba(126, 255, 178, 0.5);
+  background: rgba(14, 129, 135, 0.2);
+}
+
 .area-pill {
   display: inline-flex;
   width: fit-content;
@@ -442,6 +447,24 @@ h2 {
   background: var(--technology-blue);
   font-size: 0.85rem;
   font-weight: 700;
+}
+
+.area-pill.area-seguranca {
+  background: #ff6b6b;
+}
+
+.area-pill.area-qualidade {
+  background: #ffe66d;
+}
+
+.done-toggle {
+  color: #ffffff;
+  background: #35607a;
+}
+
+.done-toggle.is-done {
+  color: #052a1c;
+  background: #7effb2;
 }
 
 .item-title {
