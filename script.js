@@ -1,591 +1,523 @@
-﻿const USERS = [
-  {
-    email: "remorais@borgwarner.com",
-    password: "teste",
-    name: "Renato Morais",
-    role: "collaborator"
-  },
-  {
-    email: "fsiqueira@borgwarner.com",
-    password: "teste",
-    name: "Felipe Siqueira",
-    role: "manager"
-  }
-];
-
-const DEFAULT_STAGE_TEMPLATE = [
-  "Criação de cronograma",
-  "Criação do A3 (Time + Metas + Objetivos)",
-  "Kickoff com Time Multifuncional",
-  "Abertura de CM2",
-  "Abertura do Formulário de Aprovação de Máquinas",
-  "Haverá necessidade de alteração de Layout?",
-  "Haverá necessidade do Cliente ser notificado ou não?",
-  "Caderno de especificações técnicas",
-  "Solicitação de orçamentos",
-  "Recebimento de orçamentos",
-  "Aprovação de requisições de compra",
-  "Envio de pedido ao fornecedor",
-  "Revisão do pre-design (MEP)",
-  "Revisão final do design (time multifuncional)",
-  "Início da construção / fabricação",
-  "Requisição para LOG de peças para tryout",
-  "Montagem das peças de tryout",
-  "Visita técnica ao fornecedor para FUP (visita 1)",
-  "Visita técnica ao fornecedor para FUP (visita 2)",
-  "Visita técnica ao fornecedor para FUP (visita 3)",
-  "Visita técnica ao fornecedor para FUP (visita 4)",
-  "Visita técnica ao fornecedor para FUP (visita 5)",
-  "Envio das peças de tryout ao fornecedor",
-  "Visita técnica ao fornecedor para tryout",
-  "Visita técnica ao fornecedor para validação de estudos",
-  "Visita ao fornecedor para validação de processo (time multifuncional)",
-  "Planejamento para entrega na Borgwarner (orçar carga/descarga?)",
-  "Planejamento para entrega na Borgwarner (Segurança e Recebimento?)",
-  "Entrega da Máquina",
-  "Estudos de validação na Borgwarner",
-  "Aprovação/validação de processo com time multifuncional",
-  "Treinamento para os envolvidos dos 3 turnos",
-  "Integração de Atividades assinada pelos envolvidos dos 3 turnos",
-  "Validação com cliente na Borgwarner",
-  "Aprovação do cliente para produzir",
-  "SOP (Start of Production)",
-  "Lições aprendidas"
-];
-
-const STORAGE_KEY = "bw_project_performance_v1";
-const MAX_FILE_SIZE = 25 * 1024 * 1024;
-const LATE_THRESHOLD = 0.1;
-const DATE_FORMAT = new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" });
-const WEEKDAY_FORMAT = new Intl.DateTimeFormat("pt-BR", { weekday: "long" });
-
-const state = {
-  user: null,
-  projects: loadProjects(),
-  currentStageProjectId: null,
-  managerOwnerFilter: "all"
+﻿const DAYS = {
+  1: "Segunda-feira",
+  2: "Terça-feira",
+  3: "Quarta-feira",
+  4: "Quinta-feira",
+  5: "Sexta-feira"
 };
 
-const loginView = document.querySelector("#loginView");
-const appView = document.querySelector("#appView");
-const sessionBar = document.querySelector("#sessionBar");
-const loginForm = document.querySelector("#loginForm");
-const loginEmail = document.querySelector("#loginEmail");
-const loginPassword = document.querySelector("#loginPassword");
+const agendaItems = [
+  {
+    area: "Segurança",
+    title: "DDS",
+    frequency: "4x semana",
+    days: [2, 3, 4, 5],
+    links: [{ label: "Abrir pasta", url: "\\\\enterprise.borgwarner.net\\shares\\ITA\\PUBLICO\\Segurança\\7. DDS - PRODUÇÃO" }]
+  },
+  {
+    area: "Segurança",
+    title: "BBO",
+    frequency: "Mensal - 1ª semana do mês",
+    days: [1],
+    monthlyFirstWeek: true,
+    note: "Link pendente: controle BBO ainda não localizado.",
+    links: []
+  },
+  {
+    area: "Qualidade",
+    title: "PFMEA",
+    frequency: "Mensal - 1ª semana do mês",
+    days: [2],
+    monthlyFirstWeek: true,
+    links: [{ label: "Cronograma PFMEA", url: "\\\\enterprise.borgwarner.net\\shares\\ITA\\PUBLICO\\PFMEA\\Administrativa\\2026\\CRONOGRAMA PFMEA 2026" }]
+  },
+  {
+    area: "Qualidade",
+    title: "SAC",
+    frequency: "Semanal",
+    days: [1],
+    links: [{ label: "Controle de SAC", url: "https://app.powerbi.com/groups/me/apps/c2d998d3-38ee-44a2-b33a-dbc646d1d9ad/reports/6fd9648b-4113-4030-b981-8733ed6f06ad/3c8e3f2beef0c4e225a6ctid=9f904e8a-2bf7-4b81-ac8a-a560eae844b3&experience=power-bi" }]
+  },
+  {
+    area: "Produtividade",
+    title: "Gestão de Ações - Montagem PC/CM12 (Celso / Felipe)",
+    frequency: "Semanal",
+    days: [2],
+    links: [{ label: "Gestão de Ações", url: "https://app.powerbi.com/groups/me/apps/77b9df0c-9b23-471b-bfa0-5fa118edb48a/reports/a43f5405-26aa-4e5c-ac0b-dd1c949bc806/ReportSection?ctid=9f904e8a-2bf7-4b81-ac8a-a560eae844b3&experience=power-bi" }]
+  },
+  {
+    area: "Produtividade",
+    title: "Gestão de Ações - Montagem CV (João / Luiz)",
+    frequency: "Semanal",
+    days: [3],
+    links: [{ label: "Gestão de Ações", url: "https://app.powerbi.com/groups/me/apps/77b9df0c-9b23-471b-bfa0-5fa118edb48a/reports/a43f5405-26aa-4e5c-ac0b-dd1c949bc806/ReportSection?ctid=9f904e8a-2bf7-4b81-ac8a-a560eae844b3&experience=power-bi" }]
+  },
+  {
+    area: "Produtividade",
+    title: "Gestão de Ações - Usinagem (Darlan / Rodrigo)",
+    frequency: "Semanal",
+    days: [4],
+    links: [{ label: "Gestão de Ações", url: "https://app.powerbi.com/groups/me/apps/77b9df0c-9b23-471b-bfa0-5fa118edb48a/reports/a43f5405-26aa-4e5c-ac0b-dd1c949bc806/ReportSection?ctid=9f904e8a-2bf7-4b81-ac8a-a560eae844b3&experience=power-bi" }]
+  },
+  {
+    area: "Produtividade",
+    title: "Gestão de Ações - Morse / Thermal (Fábio / Axel)",
+    frequency: "Semanal",
+    days: [5],
+    links: [{ label: "Gestão de Ações", url: "https://app.powerbi.com/groups/me/apps/77b9df0c-9b23-471b-bfa0-5fa118edb48a/reports/a43f5405-26aa-4e5c-ac0b-dd1c949bc806/ReportSection?ctid=9f904e8a-2bf7-4b81-ac8a-a560eae844b3&experience=power-bi" }]
+  },
+  {
+    area: "Produtividade",
+    title: "Gestão de Ações - Escalonadas em Nível 2 e Nível 3",
+    frequency: "Mensal - 1ª semana do mês",
+    days: [3],
+    monthlyFirstWeek: true,
+    links: [{ label: "Gestão de Ações", url: "https://app.powerbi.com/groups/me/apps/77b9df0c-9b23-471b-bfa0-5fa118edb48a/reports/a43f5405-26aa-4e5c-ac0b-dd1c949bc806/ReportSection?ctid=9f904e8a-2bf7-4b81-ac8a-a560eae844b3&experience=power-bi" }]
+  },
+  {
+    area: "Produtividade",
+    title: "Horas Extras",
+    frequency: "Semanal",
+    days: [4],
+    note: "Quem tiver hora extra, por favor enviar solicitação.",
+    links: []
+  },
+  {
+    area: "Melhoria Contínua",
+    title: "Treinamentos via LMS",
+    frequency: "Mensal - 1ª semana do mês",
+    days: [5],
+    monthlyFirstWeek: true,
+    links: [{ label: "Controle LMS", url: "https://borgwarner-my.sharepoint.com/:x:/p/rcerchiari/IQDY-ncysZCOT6xeh3tFdekKAYPn4EwT5IbM-MA_WVBy7hQe=mPKkog&CID=3BD3BFED-797C-4ADF-8293-8BFBE5CA803B&wdLOR=c680A1FED-7311-4BDA-9C79-1607D405C14C" }]
+  },
+  {
+    area: "Melhoria Contínua",
+    title: "Redução índice de refugo (Linhas de CV) - Luiz Kumagai",
+    frequency: "Semanal",
+    days: [4],
+    links: [{ label: "Controle refugo", url: "https://app.powerbi.com/groups/me/apps/2dfba8c2-6aac-4987-ba39-db97e2d8c33d/reports/0e20c425-6ddf-4ac3-98bf-1ca7f19b941a/ReportSection?ctid=9f904e8a-2bf7-4b81-ac8a-a560eae844b3&disableBranding=1&experience=power-bi" }]
+  },
+  {
+    area: "Melhoria Contínua",
+    title: "HEIJUNKA - Balanceamento de células - Caio Pinho",
+    frequency: "Semanal",
+    days: [2],
+    links: [
+      { label: "Pasta projeto", url: "\\\\enterprise.borgwarner.net\\shares\\ITA\\MANUFATURA\\ENG. MANUFATURA\\74 - Process Mapping (CV&US&MORSE&THER)\\2026" },
+      { label: "Power BI", url: "https://app.powerbi.com/groups/me/reports/262bb859-d86a-41bf-bb51-d200ead90108/8ef3a193b87e7cd0077cexperience=power-bi" }
+    ]
+  },
+  {
+    area: "Melhoria Contínua",
+    title: "Report Saving Projetos - Caio Pinho",
+    frequency: "Semanal",
+    days: [3],
+    links: [{ label: "Dash reporte", url: "https://app.powerbi.com/groups/me/apps/c2d998d3-38ee-44a2-b33a-dbc646d1d9ad/reports/d0080093-7897-4ef5-8871-552fb134e0bf/490058da37250deb69b6ctid=9f904e8a-2bf7-4b81-ac8a-a560eae844b3&experience=power-bi" }]
+  },
+  {
+    area: "Melhoria Contínua",
+    title: "SMED - Redução tempo de setup - Caio Pinho",
+    frequency: "Semanal",
+    days: [3],
+    links: [{ label: "SMED", url: "\\\\enterprise.borgwarner.net\\shares\\ITA\\MANUFATURA\\ENG. MANUFATURA\\12 SMED Project\\SMED - TTT System\\2026" }]
+  },
+  {
+    area: "Melhoria Contínua",
+    title: "Unificação BL24 e BL37 (remoção BL24) - Darlan Silva",
+    frequency: "Semanal",
+    days: [4],
+    links: []
+  },
+  {
+    area: "Melhoria Contínua",
+    title: "Nova balanceadora S&W EBW1 - Darlan Silva",
+    frequency: "Semanal",
+    days: [4],
+    note: "Link pendente: pasta projeto ainda não informada.",
+    links: []
+  },
+  {
+    area: "Melhoria Contínua",
+    title: "Unificação TA38/56 - TA60/61 - Rodrigo Vieira",
+    frequency: "Semanal",
+    days: [5],
+    note: "Link pendente: pasta projeto ainda não informada.",
+    links: []
+  },
+  {
+    area: "Melhoria Contínua",
+    title: "Eliminação processo de balanceamento rotor PC (BL37) - Rodrigo Vieira",
+    frequency: "Semanal",
+    days: [5],
+    note: "Link pendente: pasta projeto ainda não informada.",
+    links: []
+  },
+  {
+    area: "Melhoria Contínua",
+    title: "Unificação 3 células da Carcaça Central para 2 células - Rodrigo Vieira",
+    frequency: "Semanal",
+    days: [5],
+    note: "Link pendente: pasta projeto ainda não informada.",
+    links: []
+  },
+  {
+    area: "Melhoria Contínua",
+    title: "Implementação UPAM Box (CM03, CM04, CM09 e CM10) - João Sebode",
+    frequency: "Semanal",
+    days: [1],
+    links: [{ label: "Pasta projeto", url: "\\\\enterprise.borgwarner.net\\shares\\ITA\\MANUFATURA\\ENG. MANUFATURA\\54 Projetos ETTS\\129 - UPAM Box Itatiba Validation" }]
+  },
+  {
+    area: "Melhoria Contínua",
+    title: "Melhoria de OEE nas BLs CEMB (refugo) - Celso Benjamin",
+    frequency: "Semanal",
+    days: [1],
+    links: [{ label: "Painel", url: "http://rzevssql23.rzeszow.turbos.borgwarner.net:3000/d/ff99f813-fbe8-4660-9e9b-87e320944f4a/painel-de-gestao-balanceadorasorgId=3&from=now-6h&to=now&timezone=browser&refresh=2h&showCategory=Repeat%20options" }]
+  },
+  {
+    area: "Melhoria Contínua",
+    title: "Implementação Volvo VTG (P3390) na CM12 - Celso Benjamin",
+    frequency: "Semanal",
+    days: [4],
+    links: [{ label: "Cronograma", url: "\\\\enterprise.borgwarner.net\\shares\\ITA\\MANUFATURA\\ENG. MANUFATURA\\15 APQP\\2025\\04. VOLVO VTG" }]
+  },
+  {
+    area: "Melhoria Contínua",
+    title: "Linha HR10 (CM17) - Felipe Simenez",
+    frequency: "Semanal",
+    days: [1],
+    links: [{ label: "Cronograma", url: "\\\\enterprise.borgwarner.net\\shares\\ITA\\MANUFATURA\\ENG. MANUFATURA\\54 Projetos ETTS\\145 - HR10 Rzeszow - Itatiba\\1 - Cronograma" }]
+  },
+  {
+    area: "Melhoria Contínua",
+    title: "Unificação células AFTER (CMA e CMB) - João Sebode",
+    frequency: "Semanal",
+    days: [2],
+    links: [{ label: "Pasta projeto", url: "\\\\enterprise.borgwarner.net\\shares\\ITA\\MANUFATURA\\ENG. MANUFATURA\\54 Projetos ETTS\\152 - Unificação células AFTER (CMA e CMB)" }]
+  },
+  {
+    area: "Melhoria Contínua",
+    title: "Máquina automática de envelopamento (filme Stretch) - João Sebode",
+    frequency: "Semanal",
+    days: [1],
+    links: [{ label: "Pasta projeto", url: "\\\\enterprise.borgwarner.net\\shares\\ITA\\MANUFATURA\\ENG. MANUFATURA\\54 Projetos ETTS\\151 - Máquina automática de envelopamento (filme Stretch)" }]
+  },
+  {
+    area: "Melhoria Contínua",
+    title: "Realocar small parts próximo a linhas de CV - Luiz Kumagai",
+    frequency: "Semanal",
+    days: [3],
+    links: [{ label: "Pasta projeto", url: "\\\\enterprise.borgwarner.net\\shares\\ITA\\MANUFATURA\\ENG. MANUFATURA\\54 Projetos ETTS\\150 - Transferência do Mercadinho para as Células de CV" }]
+  },
+  {
+    area: "Melhoria Contínua",
+    title: "Redução quantidade de chamados MEP - Tadeu Pereira / Felipe Winck",
+    frequency: "Semanal",
+    days: [2],
+    links: [{ label: "Pasta projeto", url: "\\\\enterprise.borgwarner.net\\shares\\ITA\\MANUFATURA\\ENG. MANUFATURA\\54 Projetos ETTS\\140 - Controle de Chamados" }]
+  },
+  {
+    area: "Melhoria Contínua",
+    title: "Digitalização (eliminação de papel) - Renato Morais",
+    frequency: "Semanal",
+    days: [4],
+    links: [{ label: "Pasta projeto", url: "\\\\enterprise.borgwarner.net\\shares\\ITA\\MANUFATURA\\ENG. MANUFATURA\\54 Projetos ETTS\\153 - Digitalização da Usinagem" }]
+  },
+  {
+    area: "Melhoria Contínua",
+    title: "Handover",
+    frequency: "Semanal",
+    days: [3],
+    links: [{ label: "Handover", url: "https://borgwarner.sharepoint.com/:x:/r/teams/msteams_d09917/Shared%20Documents/ETTS_Program%20Open%20Issues%20List/BWS%2055011-06%20-%20MER%20Swim%20Lane/100_HandOver%20Forms%20(PIG7.3-09)/HandOvers%20Manufatura%20-%20Controle.xlsxd=w0a17e746e3ff43fa834fa9ad78611f98&csf=1&web=1&e=3FYTEe&wdLOR=cDEE6F5D5-699D-44AE-91E3-D4ACDA154EF6" }]
+  },
+  {
+    area: "Melhoria Contínua",
+    title: "Controle depósito MEP - Caio Pinho",
+    frequency: "Semanal",
+    days: [5],
+    links: [{ label: "Power BI", url: "https://app.powerbi.com/groups/me/reports/57e25916-638c-4e37-a646-f7f71b3b9dd1/94274339dbd572f883f1experience=power-bi" }]
+  },
+  {
+    area: "Melhoria Contínua",
+    title: "PIT",
+    frequency: "Semanal",
+    days: [5],
+    links: [{ label: "PIT", url: "https://app.powerbi.com/groups/me/apps/c2d998d3-38ee-44a2-b33a-dbc646d1d9ad/reports/d91575a1-027b-476d-87cb-845bd9299dc6/ReportSection?ctid=9f904e8a-2bf7-4b81-ac8a-a560eae844b3&experience=power-bi" }]
+  },
+  {
+    area: "Férias",
+    title: "Cronograma de Férias",
+    frequency: "Semanal",
+    days: [1],
+    links: [{ label: "Controle férias", url: "https://borgwarner-my.sharepoint.com/:x:/r/personal/rcerchiari_borgwarner_com/_layouts/15/Doc.aspxsourcedoc=%7BA29F71D7-9FF4-4B86-9F28-BA226A0B3CF4%7D&file=Controle%20F%25u00e9rias%20MEP%20(5).xlsx&nav=MTVfe0UwQjhERTQyLUNEQjAtNEY4MS1CQ0E4LTdDMDMyRUQ3RDE0OH0&action=default&mobileredirect=true&wdLOR=cEB36A3E3-BAC5-454F-874A-088A9E1E9A79" }]
+  },
+  {
+    area: "Motivação",
+    title: "Mensagem Motivacional - Time",
+    frequency: "Semanal",
+    days: [1],
+    links: []
+  }
+];
 
-const heroTitle = document.querySelector("#heroTitle");
-const heroSubtitle = document.querySelector("#heroSubtitle");
-const todayLabel = document.querySelector("#todayLabel");
-const todayDate = document.querySelector("#todayDate");
+const powerBiConfig = {
+  title: "Indicadores Fixos da Reunião",
+  subtitle: "Painéis permanentes de acompanhamento da manufatura.",
+  embeds: [
+    { label: "Incidentes e Acidentes", url: "https://app.powerbi.com/reportEmbed?reportId=a613922a-6aa9-4d0b-a08d-89ad34a4dd97&appId=52078303-0901-4553-a5e5-8a10a7182946&autoAuth=true&ctid=9f904e8a-2bf7-4b81-ac8a-a560eae844b3" },
+    { label: "Controle de SAC", url: "https://app.powerbi.com/reportEmbed?reportId=c85896fc-f4df-4d07-bc4b-d748e7da1433&appId=c2d998d3-38ee-44a2-b33a-dbc646d1d9ad&autoAuth=true&ctid=9f904e8a-2bf7-4b81-ac8a-a560eae844b3" },
+    { label: "Dashboard OEE", url: "https://app.powerbi.com/reportEmbed?reportId=d966fc20-91e7-47c4-aa7e-97a19bcbc807&appId=2dfba8c2-6aac-4987-ba39-db97e2d8c33d&autoAuth=true&ctid=9f904e8a-2bf7-4b81-ac8a-a560eae844b3" },
+    { label: "Dashboard Retrabalho", url: "https://app.powerbi.com/reportEmbed?reportId=06e7c078-2ea4-4427-bd6b-82ce4e7982d5&appId=2dfba8c2-6aac-4987-ba39-db97e2d8c33d&autoAuth=true&ctid=9f904e8a-2bf7-4b81-ac8a-a560eae844b3" },
+    { label: "Performance por Responsável", url: "" }
+  ]
+};
 
-const collaboratorView = document.querySelector("#collaboratorView");
-const projectForm = document.querySelector("#projectForm");
-const projectName = document.querySelector("#projectName");
-const projectArea = document.querySelector("#projectArea");
-const projectDeadline = document.querySelector("#projectDeadline");
-const projectScheduleType = document.querySelector("#projectScheduleType");
-const customStagesWrap = document.querySelector("#customStagesWrap");
-const customStages = document.querySelector("#customStages");
-const myProjectsList = document.querySelector("#myProjectsList");
-const myProjectsEmpty = document.querySelector("#myProjectsEmpty");
+const GD_STORAGE_KEY = "gd_action_items_v1";
+const gdItems = loadGdItems();
+const AGENDA_CHECK_STORAGE_KEY = "gd_agenda_checks_v1";
+const checkedAgendaItems = loadCheckedAgendaItems();
+resetAgendaChecks();
 
-const managerView = document.querySelector("#managerView");
-const ownerFilter = document.querySelector("#ownerFilter");
-const managerProjectsList = document.querySelector("#managerProjectsList");
-const managerProjectsEmpty = document.querySelector("#managerProjectsEmpty");
+let selectedDay = getInitialDay();
+let showingAll = false;
+let selectedBiIndex = 0;
 
-const kpiOnTrack = document.querySelector("#kpiOnTrack");
-const kpiAhead = document.querySelector("#kpiAhead");
-const kpiRisk = document.querySelector("#kpiRisk");
-const kpiLate = document.querySelector("#kpiLate");
-
-const stageModal = document.querySelector("#stageModal");
-const stageForm = document.querySelector("#stageForm");
-const stageModalProject = document.querySelector("#stageModalProject");
-const stageName = document.querySelector("#stageName");
-const stageComment = document.querySelector("#stageComment");
-const stageFile = document.querySelector("#stageFile");
-const stageCancel = document.querySelector("#stageCancel");
-
+const agendaList = document.querySelector("#agendaList");
+const selectedDayTitle = document.querySelector("#selectedDayTitle");
+const todayText = document.querySelector("#todayText");
+const currentDayName = document.querySelector("#currentDayName");
+const monthRuleText = document.querySelector("#monthRuleText");
+const totalItems = document.querySelector("#totalItems");
+const totalLinks = document.querySelector("#totalLinks");
+const showAllButton = document.querySelector("#showAllButton");
 const toast = document.querySelector("#toast");
+const biPanelTitle = document.querySelector("#biPanelTitle");
+const biPanelSubtitle = document.querySelector("#biPanelSubtitle");
+const biHelpText = document.querySelector("#biHelpText");
+const biTabs = document.querySelector("#biTabs");
+const biToolbar = document.querySelector("#biToolbar");
+const biCurrentDay = document.querySelector("#biCurrentDay");
+const biOpenLink = document.querySelector("#biOpenLink");
+const biFrameWrap = document.querySelector("#biFrameWrap");
+const biFrame = document.querySelector("#biFrame");
+const biEmpty = document.querySelector("#biEmpty");
+const gdForm = document.querySelector("#gdForm");
+const gdTema = document.querySelector("#gdTema");
+const gdAssunto = document.querySelector("#gdAssunto");
+const gdAcao = document.querySelector("#gdAcao");
+const gdResponsavel = document.querySelector("#gdResponsavel");
+const gdPrazo = document.querySelector("#gdPrazo");
+const gdStatus = document.querySelector("#gdStatus");
+const gdTableBody = document.querySelector("#gdTableBody");
+const gdEmpty = document.querySelector("#gdEmpty");
 
-loginForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const user = USERS.find((candidate) =>
-    candidate.email.toLowerCase() === loginEmail.value.trim().toLowerCase() &&
-    candidate.password === loginPassword.value
-  );
-
-  if (!user) {
-    showToast("Usuário ou senha inválidos.");
-    return;
-  }
-
-  state.user = user;
-  loginForm.reset();
-  render();
-});
-
-projectScheduleType.addEventListener("change", () => {
-  const isCustom = projectScheduleType.value === "custom";
-  customStagesWrap.classList.toggle("hidden", !isCustom);
-  customStages.required = isCustom;
-});
-
-projectForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-
-  const name = projectName.value.trim();
-  const area = projectArea.value.trim();
-  const deadline = projectDeadline.value;
-
-  if (!name || !area || !deadline) {
-    showToast("Preencha os dados obrigatórios do projeto.");
-    return;
-  }
-
-  if (new Date(deadline) < startOfDay(new Date())) {
-    showToast("Prazo final precisa ser hoje ou no futuro.");
-    return;
-  }
-
-  const stages = buildStagesFromForm();
-  if (!stages.length) {
-    showToast("Informe ao menos 1 stage para o cronograma customizado.");
-    return;
-  }
-
-  const project = {
-    id: crypto.randomUUID(),
-    name,
-    area,
-    deadline,
-    startDate: formatDateISO(new Date()),
-    ownerEmail: state.user.email,
-    ownerName: state.user.name,
-    createdBy: state.user.email,
-    scheduleType: projectScheduleType.value,
-    stages: stages.map((stageValue, index) => ({
-      id: crypto.randomUUID(),
-      order: index + 1,
-      name: stageValue,
-      completedAt: null,
-      note: null,
-      evidence: null
-    }))
-  };
-
-  state.projects.unshift(project);
-  persistProjects();
-  projectForm.reset();
-  projectScheduleType.value = "default";
-  customStagesWrap.classList.add("hidden");
-  customStages.required = false;
-  showToast("Projeto criado com sucesso.");
-  render();
-});
-
-stageCancel.addEventListener("click", closeStageModal);
-
-stageModal.addEventListener("click", (event) => {
-  if (event.target === stageModal) {
-    closeStageModal();
-  }
-});
-
-stageForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const project = state.projects.find((item) => item.id === state.currentStageProjectId);
-
-  if (!project) {
-    showToast("Projeto não encontrado.");
-    closeStageModal();
-    return;
-  }
-
-  const file = stageFile.files?.[0];
-  if (!file) {
-    showToast("Anexe a evidência para concluir o stage.");
-    return;
-  }
-
-  if (file.size > MAX_FILE_SIZE) {
-    showToast("Arquivo acima de 25 MB. Envie um arquivo menor.");
-    return;
-  }
-
-  const currentStage = getCurrentStage(project);
-  if (!currentStage) {
-    showToast("Este projeto já foi concluído.");
-    closeStageModal();
-    return;
-  }
-
-  currentStage.completedAt = new Date().toISOString();
-  currentStage.note = stageComment.value.trim();
-  currentStage.evidence = {
-    fileName: file.name,
-    fileType: file.type || "desconhecido",
-    fileSize: file.size,
-    uploadedBy: state.user.email,
-    uploadedAt: new Date().toISOString()
-  };
-
-  persistProjects();
-  closeStageModal();
-  showToast("Stage concluído. Projeto avançado.");
-  render();
-});
-
-ownerFilter.addEventListener("change", () => {
-  state.managerOwnerFilter = ownerFilter.value;
-  renderManagerProjects();
-});
-
-function render() {
-  const now = new Date();
-  todayLabel.textContent = capitalize(WEEKDAY_FORMAT.format(now));
-  todayDate.textContent = DATE_FORMAT.format(now);
-
-  if (!state.user) {
-    loginView.classList.remove("hidden");
-    appView.classList.add("hidden");
-    sessionBar.classList.add("hidden");
-    return;
-  }
-
-  loginView.classList.add("hidden");
-  appView.classList.remove("hidden");
-  sessionBar.classList.remove("hidden");
-
-  sessionBar.innerHTML = "";
-  const userLabel = document.createElement("span");
-  userLabel.textContent = `${state.user.name} (${state.user.role === "manager" ? "Gestor" : "Colaborador"})`;
-
-  const logout = document.createElement("button");
-  logout.className = "ghost-button";
-  logout.type = "button";
-  logout.textContent = "Sair";
-  logout.addEventListener("click", () => {
-    state.user = null;
-    state.currentStageProjectId = null;
+document.querySelectorAll(".day-button").forEach((button) => {
+  button.addEventListener("click", () => {
+    resetAgendaChecks();
+    selectedDay = Number(button.dataset.day);
+    selectedBiIndex = 0;
+    showingAll = false;
     render();
   });
+});
 
-  sessionBar.appendChild(userLabel);
-  sessionBar.appendChild(logout);
+showAllButton.addEventListener("click", () => {
+  showingAll = !showingAll;
+  render();
+});
 
-  const isManager = state.user.role === "manager";
-  collaboratorView.classList.toggle("hidden", isManager);
-  managerView.classList.toggle("hidden", !isManager);
-
-  if (isManager) {
-    heroTitle.textContent = "Dashboard do Gestor";
-    heroSubtitle.textContent = "Abra a daily com visão macro e cobre por projeto, não por ação solta.";
-    renderManagerFilters();
-    renderManagerProjects();
-    renderManagerKpis();
-  } else {
-    heroTitle.textContent = "Minha Área de Projetos";
-    heroSubtitle.textContent = "Atualize seus stages com evidência e mantenha o prazo sob controle.";
-    renderMyProjects();
+biTabs.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-bi-index]");
+  if (!button) {
+    return;
   }
-}
+  selectedBiIndex = Number(button.dataset.biIndex);
+  renderPowerBiControls();
+});
 
-function renderMyProjects() {
-  const myProjects = state.projects.filter((project) => project.ownerEmail === state.user.email);
-  renderProjectCards(myProjects, myProjectsList, true);
-  myProjectsEmpty.classList.toggle("hidden", myProjects.length > 0);
-}
-
-function renderManagerFilters() {
-  const owners = [...new Map(state.projects.map((project) => [project.ownerEmail, project.ownerName])).entries()];
-
-  ownerFilter.innerHTML = "";
-  const allOption = document.createElement("option");
-  allOption.value = "all";
-  allOption.textContent = "Todos os responsáveis";
-  ownerFilter.appendChild(allOption);
-
-  owners.forEach(([email, name]) => {
-    const option = document.createElement("option");
-    option.value = email;
-    option.textContent = name;
-    ownerFilter.appendChild(option);
-  });
-
-  if (!["all", ...owners.map(([email]) => email)].includes(state.managerOwnerFilter)) {
-    state.managerOwnerFilter = "all";
-  }
-  ownerFilter.value = state.managerOwnerFilter;
-}
-
-function renderManagerProjects() {
-  const projects = state.projects.filter((project) =>
-    state.managerOwnerFilter === "all" ? true : project.ownerEmail === state.managerOwnerFilter
-  );
-
-  renderProjectCards(projects, managerProjectsList, false);
-  managerProjectsEmpty.classList.toggle("hidden", projects.length > 0);
-}
-
-function renderManagerKpis() {
-  const counters = {
-    "on-track": 0,
-    ahead: 0,
-    risk: 0,
-    late: 0
+gdForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const item = {
+    id: Date.now().toString(36),
+    tema: gdTema.value.trim(),
+    assunto: gdAssunto.value.trim(),
+    acao: gdAcao.value.trim(),
+    responsavel: gdResponsavel.value.trim(),
+    prazo: gdPrazo.value,
+    status: gdStatus.value
   };
 
-  state.projects.forEach((project) => {
-    const status = getProjectStatus(project).key;
-    counters[status] += 1;
-  });
-
-  kpiOnTrack.textContent = counters["on-track"];
-  kpiAhead.textContent = counters.ahead;
-  kpiRisk.textContent = counters.risk;
-  kpiLate.textContent = counters.late;
-}
-
-function renderProjectCards(projects, container, includeActionButton) {
-  container.innerHTML = "";
-
-  const sorted = [...projects].sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
-  sorted.forEach((project) => {
-    const metrics = getProjectMetrics(project);
-    const status = getProjectStatus(project);
-    const currentStage = getCurrentStage(project);
-    const nextStage = getNextStage(project);
-
-    const card = document.createElement("article");
-    card.className = "project-card";
-
-    const top = document.createElement("div");
-    top.className = "project-top";
-
-    const titleWrap = document.createElement("div");
-    titleWrap.innerHTML = `
-      <h3>${escapeHtml(project.name)}</h3>
-      <p class="project-meta">${escapeHtml(project.ownerName)} | ${escapeHtml(project.area)} | prazo: ${formatDate(project.deadline)}</p>
-    `;
-
-    const badge = document.createElement("span");
-    badge.className = `badge ${status.key}`;
-    badge.textContent = status.label;
-
-    top.appendChild(titleWrap);
-    top.appendChild(badge);
-
-    const progress = document.createElement("div");
-    progress.className = "progress-zone";
-    const realWidth = clamp(metrics.realPercent, 0, 100);
-    const expectedLeft = clamp(metrics.expectedPercent, 0, 100);
-    progress.innerHTML = `
-      <div class="progress-row">
-        <span>Real: ${metrics.realPercent.toFixed(1)}%</span>
-        <span>Esperado: ${metrics.expectedPercent.toFixed(1)}%</span>
-      </div>
-      <div class="progress-track">
-        <div class="progress-fill" style="width: ${realWidth}%"></div>
-        <div class="progress-expected" style="left: calc(${expectedLeft}% - 2px)"></div>
-        <div class="progress-center">${metrics.realPercent.toFixed(1)}% | ${escapeHtml(currentStage ? currentStage.name : "Projeto concluído")}</div>
-      </div>
-      <div class="project-meta">Próximo stage: ${escapeHtml(nextStage ? nextStage.name : "Nenhum")}</div>
-    `;
-
-    const actions = document.createElement("div");
-    actions.className = "project-actions";
-
-    const lastEvidence = getLastEvidence(project);
-    if (lastEvidence) {
-      const info = document.createElement("span");
-      info.className = "project-meta";
-      info.textContent = `Última evidência: ${lastEvidence.fileName}`;
-      actions.appendChild(info);
-    }
-
-    if (includeActionButton) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "primary-button";
-      button.textContent = currentStage ? "Concluir stage atual" : "Projeto finalizado";
-      button.disabled = !currentStage;
-      button.addEventListener("click", () => openStageModal(project.id));
-      actions.appendChild(button);
-    }
-
-    card.appendChild(top);
-    card.appendChild(progress);
-    card.appendChild(actions);
-
-    container.appendChild(card);
-  });
-}
-
-function openStageModal(projectId) {
-  const project = state.projects.find((item) => item.id === projectId);
-  const currentStage = project ? getCurrentStage(project) : null;
-
-  if (!project || !currentStage) {
-    showToast("Projeto sem stage pendente.");
+  if (!item.tema || !item.assunto || !item.acao || !item.responsavel || !item.prazo) {
+    showToast("Preencha os campos obrigatorios do plano GD.");
     return;
   }
 
-  state.currentStageProjectId = projectId;
-  stageModalProject.textContent = `${project.name} | Responsável: ${project.ownerName}`;
-  stageName.value = currentStage.name;
-  stageComment.value = "";
-  stageFile.value = "";
-  stageModal.classList.remove("hidden");
-  stageModal.setAttribute("aria-hidden", "false");
-}
+  gdItems.unshift(item);
+  persistGdItems();
+  gdForm.reset();
+  gdStatus.value = "Aberto";
+  renderGdTable();
+  showToast("Item incluido no plano GD.");
+});
+render();
 
-function closeStageModal() {
-  state.currentStageProjectId = null;
-  stageModal.classList.add("hidden");
-  stageModal.setAttribute("aria-hidden", "true");
-}
-
-function buildStagesFromForm() {
-  if (projectScheduleType.value === "default") {
-    return [...DEFAULT_STAGE_TEMPLATE];
+function getInitialDay() {
+  const browserDay = new Date().getDay();
+  if (browserDay >= 1 && browserDay <= 5) {
+    return browserDay;
   }
-
-  return customStages.value
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
+  return 1;
 }
 
-function getProjectMetrics(project) {
-  const totalStages = project.stages.length;
-  const completedStages = project.stages.filter((stage) => stage.completedAt).length;
-  const realPercent = totalStages === 0 ? 0 : (completedStages / totalStages) * 100;
-
-  const start = startOfDay(new Date(project.startDate));
-  const deadline = startOfDay(new Date(project.deadline));
-  const today = startOfDay(new Date());
-
-  const totalDays = Math.max(1, dateDiffDays(start, deadline));
-  const elapsedDays = clamp(dateDiffDays(start, today), 0, totalDays);
-  const expectedPercent = (elapsedDays / totalDays) * 100;
-
-  const delayPercent = Math.max(0, expectedPercent - realPercent);
-  const delayDays = (delayPercent / 100) * totalDays;
-
-  return {
-    totalStages,
-    completedStages,
-    realPercent,
-    expectedPercent,
-    totalDays,
-    delayPercent,
-    delayDays
-  };
+function isFirstWeekOfMonth(date = new Date()) {
+  return date.getDate() <= 7;
 }
 
-function getProjectStatus(project) {
-  const metrics = getProjectMetrics(project);
-
-  if (metrics.realPercent > metrics.expectedPercent + 2) {
-    return { key: "ahead", label: "ACIMA DO ESPERADO" };
+function shouldShowItem(item, day) {
+  if (!item.days.includes(day)) {
+    return false;
   }
-
-  if (metrics.delayDays > metrics.totalDays * LATE_THRESHOLD) {
-    return { key: "late", label: "ATRASADO" };
+  if (item.monthlyFirstWeek && !isFirstWeekOfMonth()) {
+    return false;
   }
+  return true;
+}
 
-  if (metrics.delayDays > 0) {
-    return { key: "risk", label: "EM RISCO" };
+function render() {
+  const today = new Date();
+  const todayDay = getInitialDay();
+  const isFirstWeek = isFirstWeekOfMonth(today);
+  let visibleItems = showingAll
+    ? agendaItems.filter((item) => item.days.length > 0)
+    : agendaItems.filter((item) => shouldShowItem(item, selectedDay));
+  visibleItems = sortAgendaItemsForDisplay(visibleItems);
+
+  todayText.textContent = `Abra a reunião e vá direto nos temas de ${DAYS[todayDay]}. Os itens mensais aparecem automaticamente na primeira semana do mês.`;
+  currentDayName.textContent = DAYS[todayDay];
+  monthRuleText.textContent = isFirstWeek ? "Primeira semana: itens mensais liberados." : "Itens mensais ficam ocultos fora da primeira semana.";
+  selectedDayTitle.textContent = showingAll ? "Todos os itens com dia definido" : DAYS[selectedDay];
+  showAllButton.textContent = showingAll ? "Voltar ao dia" : "Ver todos";
+
+  document.querySelectorAll(".day-button").forEach((button) => {
+    button.classList.toggle("active", !showingAll && Number(button.dataset.day) === selectedDay);
+  });
+
+  totalItems.textContent = visibleItems.length;
+  totalLinks.textContent = visibleItems.reduce((sum, item) => sum + (Array.isArray(item.links) ? item.links.length : 0), 0);
+
+  agendaList.innerHTML = visibleItems.length
+    ? visibleItems.map((item) => createCard(item)).join("")
+    : `<div class="empty-state">Nenhum item programado para este dia.</div>`;
+
+  agendaList.querySelectorAll("[data-copy]").forEach(bindCopyButton);
+  agendaList.querySelectorAll("[data-network-path]").forEach(bindNetworkPathButton);
+  agendaList.querySelectorAll("[data-mark-done]").forEach(bindMarkDoneLink);
+  renderPowerBiControls();
+  renderGdTable();
+}
+
+function createCard(item) {
+  const itemId = getAgendaItemId(item);
+  const isDone = checkedAgendaItems.has(itemId);
+  const links = (Array.isArray(item.links) ? item.links : []).map((link) => createLinkButton({ ...link, itemId })).join("");
+  const daysText = item.days.length ? item.days.map((day) => DAYS[day].replace("-feira", "")).join(", ") : "Dia a confirmar";
+  const note = item.note ? `<span class="item-note">${escapeHtml(item.note)}</span>` : "";
+  const areaClass = `area-${normalizeToken(item.area)}`;
+
+  return `
+    <article class="agenda-card ${isDone ? "is-done" : ""}">
+      <div><span class="area-pill ${areaClass}">${escapeHtml(item.area)}</span></div>
+      <div>
+        <p class="item-title">${escapeHtml(item.title)}</p>
+        <p class="item-meta">${escapeHtml(item.frequency)} | ${escapeHtml(daysText)}${note}</p>
+      </div>
+      <div class="actions">
+        ${links || `<span class="item-meta">Sem link</span>`}
+      </div>
+    </article>
+  `;
+}
+
+function createLinkButton(link) {
+  const url = normalizeUrl(link.url);
+  const isNetworkPath = link.url.startsWith("\\\\");
+  const openButton = isNetworkPath
+    ? `<button class="action-button" type="button" data-network-path="${escapeAttribute(link.url)}" data-mark-done="1" data-item-id="${escapeAttribute(link.itemId || "")}">${escapeHtml(link.label)}</button>`
+    : `<a class="action-button" href="${escapeAttribute(url)}" target="_blank" rel="noreferrer" data-mark-done="1" data-item-id="${escapeAttribute(link.itemId || "")}">${escapeHtml(link.label)}</a>`;
+
+  return `
+    ${openButton}
+    <button class="action-button copy" type="button" data-copy="${escapeAttribute(link.url)}" data-item-id="${escapeAttribute(link.itemId || "")}">Copiar</button>
+  `;
+}
+
+function normalizeUrl(url) {
+  if (url.startsWith("\\\\")) {
+    return `file://///${url.slice(2).replaceAll("\\", "/")}`;
   }
-
-  return { key: "on-track", label: "NO PRAZO" };
-}
-
-function getCurrentStage(project) {
-  return project.stages.find((stage) => !stage.completedAt) || null;
-}
-
-function getNextStage(project) {
-  const current = getCurrentStage(project);
-  if (!current) {
-    return null;
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return repairWebUrl(url);
   }
-
-  const currentIndex = project.stages.findIndex((stage) => stage.id === current.id);
-  return project.stages[currentIndex + 1] || null;
+  return `https://${url}`;
 }
 
-function getLastEvidence(project) {
-  const completedStages = project.stages
-    .filter((stage) => stage.completedAt && stage.evidence)
-    .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
-
-  return completedStages[0]?.evidence || null;
-}
-
-function persistProjects() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.projects));
-}
-
-function loadProjects() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return [];
+function repairWebUrl(url) {
+  let fixed = url;
+  const firstParamCandidates = ["reportId=", "ctid=", "orgId=", "sourcedoc=", "d=", "e=", "experience=", "appId="];
+  if (!fixed.includes("?")) {
+    for (const key of firstParamCandidates) {
+      const idx = fixed.indexOf(key);
+      if (idx > 0) {
+        fixed = `${fixed.slice(0, idx)}?${fixed.slice(idx)}`;
+        break;
+      }
     }
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-    return parsed;
-  } catch {
-    return [];
   }
+  fixed = fixed.replace("ReportSectionctid=", "ReportSection?ctid=");
+  fixed = fixed.replace("reportEmbedreportId=", "reportEmbed?reportId=");
+  fixed = fixed.replace(".xlsxd=", ".xlsx?d=");
+  fixed = fixed.replace(".aspxsourcedoc=", ".aspx?sourcedoc=");
+  return fixed;
 }
 
-function formatDate(dateValue) {
-  return DATE_FORMAT.format(new Date(dateValue));
+function bindCopyButton(button) {
+  button.addEventListener("click", async () => {
+    const value = button.dataset.copy;
+    const isNetworkPath = value.startsWith("\\\\");
+    try {
+      await navigator.clipboard.writeText(value);
+      showToast(isNetworkPath ? "Caminho copiado. Pressione Win+R, Ctrl+V e Enter." : "Link copiado.");
+    } catch {
+      showToast(value);
+    }
+  });
 }
 
-function formatDateISO(date) {
-  return [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, "0"),
-    String(date.getDate()).padStart(2, "0")
-  ].join("-");
-}
-
-function dateDiffDays(start, end) {
-  const diffMs = end.getTime() - start.getTime();
-  return Math.floor(diffMs / (1000 * 60 * 60 * 24));
-}
-
-function startOfDay(date) {
-  const value = new Date(date);
-  value.setHours(0, 0, 0, 0);
-  return value;
-}
-
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
+function bindNetworkPathButton(button) {
+  button.addEventListener("click", async () => {
+    const value = button.dataset.networkPath;
+    setAgendaItemDone(button.dataset.itemId, true);
+    try {
+      await navigator.clipboard.writeText(value);
+      showToast("Caminho copiado. Abra no Explorer com Win+R, Ctrl+V e Enter.");
+    } catch {
+      showToast(value);
+    }
+  });
 }
 
 function showToast(message) {
   toast.textContent = message;
-  toast.classList.add("visible");
-  window.clearTimeout(showToast._timer);
-  showToast._timer = window.setTimeout(() => {
-    toast.classList.remove("visible");
-  }, 2400);
+  toast.classList.add("show");
+  window.clearTimeout(showToast.timer);
+  showToast.timer = window.setTimeout(() => toast.classList.remove("show"), 2400);
 }
 
-function capitalize(text) {
-  if (!text) {
-    return "";
-  }
-  return text.charAt(0).toUpperCase() + text.slice(1);
+function bindMarkDoneLink(element) {
+  element.addEventListener("click", () => {
+    setAgendaItemDone(element.dataset.itemId, true);
+    render();
+  });
 }
 
 function escapeHtml(value) {
@@ -597,4 +529,195 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-render();
+function escapeAttribute(value) {
+  return escapeHtml(value);
+}
+
+function normalizeToken(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function getAgendaItemId(item) {
+  return `${item.area}|${item.title}|${(item.days || []).join(",")}`;
+}
+
+function loadCheckedAgendaItems() {
+  try {
+    const saved = localStorage.getItem(AGENDA_CHECK_STORAGE_KEY);
+    const parsed = saved ? JSON.parse(saved) : [];
+    return new Set(Array.isArray(parsed) ? parsed : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function persistCheckedAgendaItems() {
+  localStorage.setItem(AGENDA_CHECK_STORAGE_KEY, JSON.stringify([...checkedAgendaItems]));
+}
+
+function resetAgendaChecks() {
+  checkedAgendaItems.clear();
+  persistCheckedAgendaItems();
+}
+
+function setAgendaItemDone(itemId, done) {
+  if (!itemId) return;
+  if (done) {
+    checkedAgendaItems.add(itemId);
+  } else {
+    checkedAgendaItems.delete(itemId);
+  }
+  persistCheckedAgendaItems();
+}
+
+function sortAgendaItemsForDisplay(items) {
+  if (selectedDay !== 1 || showingAll) {
+    return items;
+  }
+  const priority = { seguranca: 0, qualidade: 1 };
+  return [...items].sort((a, b) => {
+    const pa = priority[normalizeToken(a.area)] ?? 9;
+    const pb = priority[normalizeToken(b.area)] ?? 9;
+    if (pa !== pb) return pa - pb;
+    return a.title.localeCompare(b.title, "pt-BR");
+  });
+}
+
+function renderPowerBiControls() {
+  const embeds = powerBiConfig.embeds || [];
+  const hasTabs = embeds.length > 1;
+
+  biPanelTitle.textContent = powerBiConfig.title;
+  biPanelSubtitle.textContent = powerBiConfig.subtitle || "";
+  biHelpText.textContent = hasTabs
+    ? "Dashboards fixos da reunião. Escolha o painel na aba."
+    : "Painel fixo da reunião.";
+
+  if (selectedBiIndex >= embeds.length) {
+    selectedBiIndex = 0;
+  }
+  if (selectedBiIndex < 0) {
+    selectedBiIndex = 0;
+  }
+
+  biTabs.hidden = !hasTabs;
+  biTabs.innerHTML = hasTabs
+    ? embeds
+      .map((embed, index) => `
+        <button class="bi-tab ${index === selectedBiIndex ? "active" : ""}" type="button" data-bi-index="${index}">
+          ${escapeHtml(embed.label || `Indicador ${index + 1}`)}
+        </button>
+      `)
+      .join("")
+    : "";
+
+  applyPowerBi();
+}
+
+function applyPowerBi() {
+  const selectedEmbed = getSelectedEmbed();
+  const url = buildPowerBiUrl(selectedEmbed);
+  const selectedLabel = selectedEmbed?.label || "Indicador";
+
+  biCurrentDay.textContent = `Dashboard | ${selectedLabel}`;
+  if (!url) {
+    biToolbar.hidden = true;
+    biFrameWrap.hidden = true;
+    biOpenLink.href = "#";
+    biFrame.removeAttribute("src");
+    biEmpty.textContent = `${selectedLabel}: indicador indisponível no momento.`;
+    biEmpty.hidden = false;
+    return;
+  }
+
+  biToolbar.hidden = false;
+  biFrameWrap.hidden = false;
+  biEmpty.hidden = true;
+  biOpenLink.href = url;
+  if (biFrame.src !== url) {
+    biFrame.src = url;
+  }
+}
+
+function buildPowerBiUrl(embedItem) {
+  const rawUrl = (embedItem?.url || "").trim();
+  if (!rawUrl) {
+    return "";
+  }
+  return rawUrl;
+}
+
+function getSelectedEmbed() {
+  const embeds = powerBiConfig.embeds || [];
+  if (!embeds.length) {
+    return null;
+  }
+  if (selectedBiIndex < 0 || selectedBiIndex >= embeds.length) {
+    selectedBiIndex = 0;
+  }
+  return embeds[selectedBiIndex];
+}
+
+function loadGdItems() {
+  try {
+    const saved = localStorage.getItem(GD_STORAGE_KEY);
+    const parsed = saved ? JSON.parse(saved) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistGdItems() {
+  localStorage.setItem(GD_STORAGE_KEY, JSON.stringify(gdItems));
+}
+
+function renderGdTable() {
+  gdTableBody.innerHTML = gdItems.map((item) => `
+    <tr>
+      <td>${escapeHtml(item.tema || "")}</td>
+      <td>${escapeHtml(item.assunto || "")}</td>
+      <td>${escapeHtml(item.acao || "")}</td>
+      <td>${escapeHtml(item.responsavel || "")}</td>
+      <td>${escapeHtml(item.prazo || "")}</td>
+      <td>
+        <select class="gd-status" data-gd-status="${escapeAttribute(item.id)}">
+          ${["Aberto", "Em andamento", "Finalizado"]
+            .map((status) => `<option ${status === item.status ? "selected" : ""}>${status}</option>`)
+            .join("")}
+        </select>
+      </td>
+      <td>
+        <button class="gd-delete" type="button" data-gd-delete="${escapeAttribute(item.id)}">Excluir</button>
+      </td>
+    </tr>
+  `).join("");
+
+  gdEmpty.hidden = gdItems.length > 0;
+
+  gdTableBody.querySelectorAll("[data-gd-status]").forEach((select) => {
+    select.addEventListener("change", () => {
+      const target = gdItems.find((row) => row.id === select.dataset.gdStatus);
+      if (!target) return;
+      target.status = select.value;
+      persistGdItems();
+      showToast("Status atualizado.");
+    });
+  });
+
+  gdTableBody.querySelectorAll("[data-gd-delete]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const index = gdItems.findIndex((row) => row.id === button.dataset.gdDelete);
+      if (index < 0) return;
+      gdItems.splice(index, 1);
+      persistGdItems();
+      renderGdTable();
+      showToast("Item excluido do plano GD.");
+    });
+  });
+}

@@ -3,162 +3,135 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>BorgWarner | Gestão por Projeto</title>
-    <link rel="stylesheet" href="style.css?v=20260410-1">
+    <title>Reunião de Gestão Diária</title>
+    <link rel="stylesheet" href="style.css?v=20260409-2">
   </head>
   <body>
     <header class="brand-bar">
-      <div class="brand-left">
-        <strong>BORGWARNER</strong>
-        <span>Project Performance Daily</span>
-      </div>
-      <div id="sessionBar" class="session-bar hidden"></div>
+      <strong>BORGWARNER</strong>
+      <span>Daily Management</span>
     </header>
-
     <main class="app-shell">
-      <section id="loginView" class="panel auth-panel">
-        <p class="eyebrow">Acesso</p>
-        <h1>Gestão por Stage</h1>
-        <p class="subtitle">Acompanhe projetos por progresso real vs esperado e leve apenas bloqueios para a daily.</p>
-        <form id="loginForm" class="auth-form">
-          <label>
-            E-mail
-            <input id="loginEmail" type="email" required placeholder="seu.email@borgwarner.com">
-          </label>
-          <label>
-            Senha
-            <input id="loginPassword" type="password" required placeholder="********">
-          </label>
-          <button type="submit" class="primary-button">Entrar</button>
-        </form>
-        <p class="hint">Usuários MVP: `remorais@borgwarner.com` e `fsiqueira@borgwarner.com`.</p>
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Engenharia de Manufatura</p>
+          <h1>Reunião de Gestão Diária</h1>
+          <p class="subtitle" id="todayText">Carregando agenda...</p>
+        </div>
+        <div class="hero-card">
+          <span class="hero-label">Hoje</span>
+          <strong id="currentDayName">-</strong>
+          <small id="monthRuleText">-</small>
+        </div>
       </section>
 
-      <section id="appView" class="hidden">
-        <section class="hero">
+      <section class="toolbar" aria-label="Filtro por dia">
+        <button class="day-button" data-day="1">Segunda</button>
+        <button class="day-button" data-day="2">Terça</button>
+        <button class="day-button" data-day="3">Quarta</button>
+        <button class="day-button" data-day="4">Quinta</button>
+        <button class="day-button" data-day="5">Sexta</button>
+      </section>
+
+      <section class="summary-grid" aria-label="Resumo">
+        <article>
+          <span>Itens do dia</span>
+          <strong id="totalItems">0</strong>
+        </article>
+        <article>
+          <span>Links disponíveis</span>
+          <strong id="totalLinks">0</strong>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
           <div>
-            <p class="eyebrow">Engenharia de Manufatura</p>
-            <h2 id="heroTitle">Painel</h2>
-            <p id="heroSubtitle" class="subtitle">-</p>
+            <p class="eyebrow">Agenda</p>
+            <h2 id="selectedDayTitle">-</h2>
           </div>
-          <div class="hero-card">
-            <span class="hero-label">Hoje</span>
-            <strong id="todayLabel">-</strong>
-            <small id="todayDate">-</small>
-          </div>
-        </section>
-
-        <section id="collaboratorView" class="role-view hidden">
-          <section class="panel">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">Projeto</p>
-                <h3>Cadastrar novo projeto</h3>
-              </div>
-            </div>
-            <form id="projectForm" class="grid-form">
-              <label>
-                Nome do projeto
-                <input id="projectName" type="text" required>
-              </label>
-              <label>
-                Área do projeto
-                <input id="projectArea" type="text" required>
-              </label>
-              <label>
-                Prazo final
-                <input id="projectDeadline" type="date" required>
-              </label>
-              <label>
-                Cronograma
-                <select id="projectScheduleType">
-                  <option value="default">Padrão (BorgWarner)</option>
-                  <option value="custom">Novo do zero</option>
-                </select>
-              </label>
-              <label class="full-width" id="customStagesWrap">
-                Stages customizados (1 por linha)
-                <textarea id="customStages" rows="5" placeholder="Ex: Kickoff\nMapeamento\nTryout\nSOP"></textarea>
-              </label>
-              <button type="submit" class="primary-button">Criar projeto</button>
-            </form>
-          </section>
-
-          <section class="panel">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">Minha carteira</p>
-                <h3>Meus projetos</h3>
-              </div>
-            </div>
-            <div id="myProjectsList" class="project-list"></div>
-            <div id="myProjectsEmpty" class="empty-state">Nenhum projeto cadastrado.</div>
-          </section>
-        </section>
-
-        <section id="managerView" class="role-view hidden">
-          <section class="summary-grid">
-            <article>
-              <span>No prazo</span>
-              <strong id="kpiOnTrack">0</strong>
-            </article>
-            <article>
-              <span>Acima do esperado</span>
-              <strong id="kpiAhead">0</strong>
-            </article>
-            <article>
-              <span>Em risco</span>
-              <strong id="kpiRisk">0</strong>
-            </article>
-            <article>
-              <span>Atrasado</span>
-              <strong id="kpiLate">0</strong>
-            </article>
-          </section>
-
-          <section class="panel">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">Daily</p>
-                <h3>Dashboard gestor</h3>
-              </div>
-              <div>
-                <select id="ownerFilter"></select>
-              </div>
-            </div>
-            <div id="managerProjectsList" class="project-list"></div>
-            <div id="managerProjectsEmpty" class="empty-state">Nenhum projeto encontrado para o filtro selecionado.</div>
-          </section>
-        </section>
+          <button id="showAllButton" class="secondary-button" type="button">Ver todos</button>
+        </div>
+        <div id="agendaList" class="agenda-list"></div>
       </section>
+
+      <section class="panel bi-panel">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Power BI</p>
+            <h2 id="biPanelTitle">Ações da Manufatura</h2>
+            <p class="item-meta" id="biPanelSubtitle"></p>
+          </div>
+        </div>
+
+        <p class="item-meta bi-help" id="biHelpText">
+          Painel de indicadores do dia selecionado.
+        </p>
+
+        <div class="bi-tabs" id="biTabs"></div>
+
+        <div class="bi-toolbar" id="biToolbar">
+          <span class="item-meta" id="biCurrentDay">-</span>
+          <a id="biOpenLink" class="action-button" href="#" target="_blank" rel="noreferrer">Abrir em nova aba</a>
+        </div>
+
+        <div class="bi-frame-wrap" id="biFrameWrap">
+          <iframe
+            id="biFrame"
+            title="Ações da Manufatura"
+            loading="lazy"
+            referrerpolicy="strict-origin-when-cross-origin"
+            allowfullscreen>
+          </iframe>
+        </div>
+        <div id="biEmpty" class="bi-empty">Indicador indisponível para este dia.</div>
+      </section>
+
+      <section class="panel gd-panel">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">GD</p>
+            <h2 id="gdTitle">Plano de Ação GD</h2>
+            <p class="item-meta" id="gdSubtitle">Controle rápido da reunião: incluir, excluir e mudar status.</p>
+          </div>
+        </div>
+
+        <form id="gdForm" class="gd-form">
+          <input id="gdTema" type="text" placeholder="Tema (ex.: Reunião GD)" required>
+          <input id="gdAssunto" type="text" placeholder="Assunto" required>
+          <input id="gdAcao" type="text" placeholder="Ação" required>
+          <input id="gdResponsavel" type="text" placeholder="Responsável" required>
+          <input id="gdPrazo" type="date" required>
+          <select id="gdStatus">
+            <option>Aberto</option>
+            <option>Em andamento</option>
+            <option>Finalizado</option>
+          </select>
+          <button class="secondary-button" type="submit">Incluir</button>
+        </form>
+
+        <div class="gd-table-wrap">
+          <table class="gd-table">
+            <thead>
+              <tr>
+                <th>Tema</th>
+                <th>Assunto</th>
+                <th>Ação</th>
+                <th>Responsável</th>
+                <th>Prazo</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="gdTableBody"></tbody>
+          </table>
+        </div>
+        <div id="gdEmpty" class="bi-empty">Nenhum item no plano de ação.</div>
+      </section>
+
     </main>
 
-    <div id="stageModal" class="modal hidden" aria-hidden="true">
-      <div class="modal-card">
-        <h3>Concluir stage</h3>
-        <p id="stageModalProject" class="hint"></p>
-        <form id="stageForm" class="grid-form">
-          <label>
-            Stage atual
-            <input id="stageName" type="text" disabled>
-          </label>
-          <label>
-            Comentário
-            <textarea id="stageComment" rows="3" required></textarea>
-          </label>
-          <label>
-            Evidência (qualquer arquivo, até 25 MB)
-            <input id="stageFile" type="file" required>
-          </label>
-          <div class="modal-actions">
-            <button id="stageCancel" type="button" class="ghost-button">Cancelar</button>
-            <button type="submit" class="primary-button">Concluir e avançar</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <script src="script.js?v=20260410-1"></script>
+    <script charset="utf-8" src="script.js?v=20260409-4"></script>
   </body>
 </html>
